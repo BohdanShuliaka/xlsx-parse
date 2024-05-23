@@ -89,6 +89,12 @@ export async function uploadHandler(req: UploadRequest, res) {
         //     return res.status(400).json({ error: `Invalid file structure. Missing currency rates for ${missingCurr.join(', ')}.` });
         // }
 
+        // IF ILS rate is not set lets assign default value to it;
+        const ILS = 'ILS';
+        if(missingCurr.includes(ILS)) {
+            currencyRatesMap.set(ILS, 1)
+        }
+
         const invoicesData = dataBody
             .map((row: any[], index) => {
                 const globalIndex = index+headerRowIdx+2;
@@ -104,7 +110,7 @@ export async function uploadHandler(req: UploadRequest, res) {
             .filter((rowData: any) => rowData['Status'] === 'Ready' || rowData['Invoice #'])
             .map((rowData: any, index) => {
                 const {  globalIndex } = rowData;
-                console.log('rowData', rowData)
+                // console.log('rowData', rowData)
                 const validationErrors = requiredColumns.reduce((errors: string[], field: string) => {
                     if (!rowData[field]) {
                         errors.push(`${field} is required in row ${globalIndex}`);
@@ -137,7 +143,7 @@ export async function uploadHandler(req: UploadRequest, res) {
                 }
 
                 console.log('invoiceTotal', invoiceTotal);
-                rowData['Invoice Total'] = invoiceTotal ? invoiceTotal.toFixed(2) : invoiceTotal;
+                rowData['Invoice Total'] = invoiceTotal ? Number(invoiceTotal.toFixed(2)) : invoiceTotal;
                 rowData['Validation Errors'] = validationErrors;
 
                 delete rowData.globalIndex;
