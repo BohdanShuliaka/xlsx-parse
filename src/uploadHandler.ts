@@ -89,6 +89,7 @@ export async function uploadHandler(req: UploadRequest, res) {
         //     return res.status(400).json({ error: `Invalid file structure. Missing currency rates for ${missingCurr.join(', ')}.` });
         // }
 
+        // Base currency
         // IF ILS rate is not set lets assign default value to it;
         const ILS = 'ILS';
         if(missingCurr.includes(ILS)) {
@@ -130,16 +131,20 @@ export async function uploadHandler(req: UploadRequest, res) {
                 const pricePerItem = rowData['Price Per Item'];
                 const quantity = rowData['Quantity'];
 
+
+
+                if (currencyRatesMap.get(itemPriceCurrency) && currencyRatesMap.get(invoiceCurrency)) {
+                    const rate = currencyRatesMap.get(itemPriceCurrency) / currencyRatesMap.get(invoiceCurrency);
+                    // Strange currency rates make this calculation not really logical, but I believe it is not a big deal :)
+                    invoiceTotal = itemPriceCurrency !== invoiceCurrency ? totalPrice * (currencyRatesMap.get(itemPriceCurrency) / currencyRatesMap.get(invoiceCurrency)) : totalPrice;
+                } else {
+                    validationErrors.push(`Unsupported currency conversion from ${itemPriceCurrency} to ${invoiceCurrency} on ${globalIndex}. Check the provided currency list`);
+                }
+
                 // verify Total Price
                 if(totalPrice !== pricePerItem*quantity) {
                     validationErrors.push(`The provided total price ${totalPrice ? totalPrice: ''} does not match the calculated total price ${pricePerItem*quantity ? pricePerItem*quantity : ''} on row ${globalIndex}.`);
-                }
-
-                if (currencyRatesMap.get(itemPriceCurrency) && currencyRatesMap.get(invoiceCurrency)) {
-                    // Strange currency rates make this calculation not really logical, but I believe it is not a big deal :)
-                    invoiceTotal = itemPriceCurrency !== invoiceCurrency ? totalPrice / currencyRatesMap.get(invoiceCurrency) : totalPrice;
-                } else {
-                    validationErrors.push(`Unsupported currency conversion from ${itemPriceCurrency} to ${invoiceCurrency} on ${globalIndex}. Check the provided currency list`);
+                    invoiceTotal = null;
                 }
 
                 console.log('invoiceTotal', invoiceTotal);
